@@ -18,7 +18,8 @@
   ],
   "bin": {
     "piskel-root": "./misc/scripts/piskel-root",
-    "piskel-cli": "./cli/index.js"
+    "piskel-cli": "./cli/index.js",
+    "piskel-palette-match": "./cli/palette-match.js"
   },
   "main": "./dest/prod/index.html",
   "scripts": {
@@ -38,7 +39,8 @@
     "unit-tests": "karma start",
     "unit-tests:watch": "karma start --auto-watch --no-single-run",
     "test": "npm run unit-tests; npm run e2e",
-    "test-ci": "bash ./run-test-ci.sh"
+    "test-ci": "bash ./run-test-ci.sh",
+    "palette-match": "node ./cli/palette-match.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
@@ -80,6 +82,7 @@
     "height": 700
   },
   "dependencies": {
-    "minimist": "^1.2.5"
+    "minimist": "^1.2.5",
+    "pngjs": "^7.0.0"
   }
 }

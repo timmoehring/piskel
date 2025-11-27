@@ -20,7 +20,8 @@
     "piskel-root": "./misc/scripts/piskel-root",
     "piskel-cli": "./cli/index.js",
     "piskel-palette-match": "./cli/palette-match.js",
-    "png-to-piskel": "./cli/png-to-piskel.js"
+    "png-to-piskel": "./cli/png-to-piskel.js",
+    "piskel-transform": "./cli/piskel-transform.js"
   },
   "main": "./dest/prod/index.html",
   "scripts": {
@@ -42,7 +43,8 @@
     "test": "npm run unit-tests; npm run e2e",
     "test-ci": "bash ./run-test-ci.sh",
     "palette-match": "node ./cli/palette-match.js",
-    "png-to-piskel": "node ./cli/png-to-piskel.js"
+    "png-to-piskel": "node ./cli/png-to-piskel.js",
+    "transform": "node ./cli/piskel-transform.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",

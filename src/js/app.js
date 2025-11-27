@@ -44,6 +44,8 @@
       this.paletteService = new pskl.service.palette.PaletteService();
       this.paletteService.addDynamicPalette(new pskl.service.palette.CurrentColorsPalette());
 
+      this.paletteMatchingService = new pskl.service.palette.PaletteMatchingService(this.piskelController);
+
       this.selectedColorsService = new pskl.service.SelectedColorsService();
       this.selectedColorsService.init();
 

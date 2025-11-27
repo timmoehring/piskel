@@ -23,114 +23,123 @@
       return;
     }
 
-    // Convert palette colors to RGB arrays for faster lookup
-    var paletteRgb = colors.map(this.hexToRgb_.bind(this));
+    // Pre-convert palette to RGB components for fast lookup
+    var paletteData = this.buildPaletteData_(colors);
+
+    // Global cache across all frames (same colors map to same results)
+    var colorCache = {};
 
     var currentFrameIndex = this.piskelController.getCurrentFrameIndex();
     var layers = allLayers ?
       this.piskelController.getLayers() :
       [this.piskelController.getCurrentLayer()];
 
-    layers.forEach(function (layer) {
+    for (var l = 0; l < layers.length; l++) {
+      var layer = layers[l];
       var frames = allFrames ?
         layer.getFrames() :
         [layer.getFrameAt(currentFrameIndex)];
 
-      frames.forEach(function (frame) {
-        this.matchFrameToPalette_(frame, paletteRgb);
-      }.bind(this));
-    }.bind(this));
+      for (var f = 0; f < frames.length; f++) {
+        this.matchFrameToPalette_(frames[f], paletteData, colorCache);
+      }
+    }
+  };
+
+  /**
+   * Build optimized palette data structure.
+   * @private
+   */
+  ns.PaletteMatchingService.prototype.buildPaletteData_ = function (colors) {
+    var data = [];
+    for (var i = 0; i < colors.length; i++) {
+      var hex = colors[i].replace(/^#/, '');
+      var bigint = parseInt(hex, 16);
+      data.push({
+        r: (bigint >> 16) & 255,
+        g: (bigint >> 8) & 255,
+        b: bigint & 255
+      });
+    }
+    return data;
   };
 
   /**
    * Match all pixels in a frame to the nearest palette color.
+   * Operates directly on pixel buffer for maximum speed.
    * @private
    */
-  ns.PaletteMatchingService.prototype.matchFrameToPalette_ = function (frame, paletteRgb) {
-    var colorCache = {};
+  ns.PaletteMatchingService.prototype.matchFrameToPalette_ = function (frame, paletteData, colorCache) {
+    var pixels = frame.pixels;
+    var length = pixels.length;
+    var modified = false;
 
-    frame.forEachPixel(function (colorInt, col, row) {
-      // Skip transparent pixels
-      var alpha = (colorInt >> 24 >>> 0) & 0xff;
+    for (var i = 0; i < length; i++) {
+      var colorInt = pixels[i];
+
+      // Skip transparent pixels (alpha = 0)
+      var alpha = (colorInt >>> 24) & 0xff;
       if (alpha === 0) {
-        return;
+        continue;
       }
 
-      // Check cache first
-      if (typeof colorCache[colorInt] !== 'undefined') {
-        frame.setPixel(col, row, colorCache[colorInt]);
-        return;
+      // Check cache
+      var cached = colorCache[colorInt];
+      if (cached !== undefined) {
+        if (pixels[i] !== cached) {
+          pixels[i] = cached;
+          modified = true;
+        }
+        continue;
       }
 
-      // Extract RGB from int
+      // Extract RGB
       var r = colorInt & 0xff;
       var g = (colorInt >> 8) & 0xff;
       var b = (colorInt >> 16) & 0xff;
 
-      // Find nearest palette color
-      var nearestColor = this.findNearestColor_([r, g, b], paletteRgb);
+      // Find nearest palette color (inline for speed)
+      var minDist = Infinity;
+      var nearestR = paletteData[0].r;
+      var nearestG = paletteData[0].g;
+      var nearestB = paletteData[0].b;
 
-      // Convert back to int (preserve original alpha)
-      var newColorInt = (alpha << 24 >>> 0) + (nearestColor[2] << 16) + (nearestColor[1] << 8) + nearestColor[0];
+      for (var p = 0; p < paletteData.length; p++) {
+        var pr = paletteData[p].r;
+        var pg = paletteData[p].g;
+        var pb = paletteData[p].b;
+
+        // Redmean weighted distance (skip sqrt - only comparing)
+        var rMean = (r + pr) >> 1;
+        var dr = r - pr;
+        var dg = g - pg;
+        var db = b - pb;
+        var dist = ((512 + rMean) * dr * dr >> 8) + 4 * dg * dg + ((767 - rMean) * db * db >> 8);
+
+        if (dist < minDist) {
+          minDist = dist;
+          nearestR = pr;
+          nearestG = pg;
+          nearestB = pb;
+          if (dist === 0) {
+            break; // Exact match
+          }
+        }
+      }
+
+      // Build new color int (preserve alpha)
+      var newColorInt = ((alpha << 24) >>> 0) + (nearestB << 16) + (nearestG << 8) + nearestR;
 
       colorCache[colorInt] = newColorInt;
-      frame.setPixel(col, row, newColorInt);
-    }.bind(this));
-  };
-
-  /**
-   * Find the nearest color in the palette using weighted Euclidean distance.
-   * Uses the "redmean" formula for better perceptual accuracy.
-   * @private
-   */
-  ns.PaletteMatchingService.prototype.findNearestColor_ = function (rgb, paletteRgb) {
-    var minDistance = Infinity;
-    var nearest = paletteRgb[0];
-
-    for (var i = 0; i < paletteRgb.length; i++) {
-      var distance = this.colorDistance_(rgb, paletteRgb[i]);
-      if (distance < minDistance) {
-        minDistance = distance;
-        nearest = paletteRgb[i];
+      if (pixels[i] !== newColorInt) {
+        pixels[i] = newColorInt;
+        modified = true;
       }
     }
 
-    return nearest;
-  };
-
-  /**
-   * Calculate perceptual color distance using the redmean formula.
-   * This is a fast approximation that accounts for human color perception.
-   * @private
-   */
-  ns.PaletteMatchingService.prototype.colorDistance_ = function (c1, c2) {
-    var rMean = (c1[0] + c2[0]) / 2;
-    var dr = c1[0] - c2[0];
-    var dg = c1[1] - c2[1];
-    var db = c1[2] - c2[2];
-
-    // Weighted Euclidean distance (redmean formula)
-    return Math.sqrt(
-      (2 + rMean / 256) * dr * dr +
-      4 * dg * dg +
-      (2 + (255 - rMean) / 256) * db * db
-    );
-  };
-
-  /**
-   * Convert hex color string to RGB array.
-   * @private
-   */
-  ns.PaletteMatchingService.prototype.hexToRgb_ = function (hex) {
-    // Remove # if present
-    hex = hex.replace(/^#/, '');
-
-    // Parse hex
-    var bigint = parseInt(hex, 16);
-    return [
-      (bigint >> 16) & 255,
-      (bigint >> 8) & 255,
-      bigint & 255
-    ];
+    // Bump version if modified
+    if (modified) {
+      frame.version++;
+    }
   };
 })();

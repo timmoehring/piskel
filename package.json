@@ -21,6 +21,7 @@
     "piskel-cli": "./cli/index.js",
     "piskel-palette-match": "./cli/palette-match.js",
     "png-to-piskel": "./cli/png-to-piskel.js",
+    "piskel-to-png": "./cli/piskel-to-png.js",
     "piskel-transform": "./cli/piskel-transform.js"
   },
   "main": "./dest/prod/index.html",
@@ -44,6 +45,7 @@
     "test-ci": "bash ./run-test-ci.sh",
     "palette-match": "node ./cli/palette-match.js",
     "png-to-piskel": "node ./cli/png-to-piskel.js",
+    "piskel-to-png": "node ./cli/piskel-to-png.js",
     "transform": "node ./cli/piskel-transform.js"
   },
   "devDependencies": {

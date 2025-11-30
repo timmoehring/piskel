@@ -17,6 +17,7 @@
 
     var createPaletteButton_ = document.querySelector('.create-palette-button');
     var editPaletteButton_ = document.querySelector('.edit-palette-button');
+    var applyPaletteButton_ = document.querySelector('.apply-palette-button');
 
     this.colorPaletteSelect_.addEventListener('change', this.onPaletteSelected_.bind(this));
     this.colorListContainer_.addEventListener('mouseup', this.onColorContainerMouseup.bind(this));
@@ -24,6 +25,7 @@
 
     createPaletteButton_.addEventListener('click', this.onCreatePaletteClick_.bind(this));
     editPaletteButton_.addEventListener('click', this.onEditPaletteClick_.bind(this));
+    applyPaletteButton_.addEventListener('click', this.onApplyPaletteClick_.bind(this));
 
     $.subscribe(Events.PALETTE_LIST_UPDATED, this.onPaletteListUpdated.bind(this));
     $.subscribe(Events.CURRENT_COLORS_UPDATED, this.fillColorListContainer.bind(this));
@@ -159,6 +161,34 @@
       dialogId : 'create-palette',
       initArgs : paletteId
     });
+  };
+
+  ns.PalettesListController.prototype.onApplyPaletteClick_ = function (evt) {
+    var palette = this.getSelectedPalette_();
+    if (!palette) {
+      $.publish(Events.SHOW_NOTIFICATION, [{'content': 'No palette selected'}]);
+      return;
+    }
+
+    var colors = palette.getColors();
+    if (!colors || colors.length === 0) {
+      $.publish(Events.SHOW_NOTIFICATION, [{'content': 'Palette has no colors'}]);
+      return;
+    }
+
+    // Apply palette matching to all frames and layers
+    pskl.app.paletteMatchingService.matchToPalette(palette, {
+      allLayers: true,
+      allFrames: true
+    });
+
+    // Save state for undo
+    $.publish(Events.PISKEL_SAVE_STATE, {
+      type: pskl.service.HistoryService.SNAPSHOT
+    });
+
+    $.publish(Events.SHOW_NOTIFICATION, [{'content': 'Palette applied to sprite'}]);
+    window.setTimeout($.publish.bind($, Events.HIDE_NOTIFICATION), 2000);
   };
 
   ns.PalettesListController.prototype.onColorContainerContextMenu = function (event) {

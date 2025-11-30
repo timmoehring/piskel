@@ -22,7 +22,8 @@
     "piskel-palette-match": "./cli/palette-match.js",
     "png-to-piskel": "./cli/png-to-piskel.js",
     "piskel-to-png": "./cli/piskel-to-png.js",
-    "piskel-transform": "./cli/piskel-transform.js"
+    "piskel-transform": "./cli/piskel-transform.js",
+    "sprite-pipeline": "./cli/sprite-pipeline.js"
   },
   "main": "./dest/prod/index.html",
   "scripts": {
@@ -46,7 +47,8 @@
     "palette-match": "node ./cli/palette-match.js",
     "png-to-piskel": "node ./cli/png-to-piskel.js",
     "piskel-to-png": "node ./cli/piskel-to-png.js",
-    "transform": "node ./cli/piskel-transform.js"
+    "transform": "node ./cli/piskel-transform.js",
+    "pipeline": "node ./cli/sprite-pipeline.js"
   },
   "devDependencies": {
     "@playwright/test": "^1.52.0",
